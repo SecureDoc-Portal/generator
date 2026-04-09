@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureDoc Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #06080f;
+            --bg2: #0d1120;
+            --bg3: #131a2e;
+            --card: #151d33;
+            --accent: #3b82f6;
+            --accent2: #6366f1;
+            --green: #22c55e;
+            --red: #ef4444;
+            --text: #e2e8f0;
+            --muted: #7a8bab;
+            --border: rgba(59,130,246,0.1);
+            --glow: rgba(59,130,246,0.12);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== BG ===== */
+        .bg-layer {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+        }
+        .bg-layer .orb {
+            position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.07;
+        }
+        .bg-layer .orb-1 { width: 700px; height: 700px; background: #3b82f6; top: -250px; left: -150px; animation: orbFloat 20s ease-in-out infinite alternate; }
+        .bg-layer .orb-2 { width: 500px; height: 500px; background: #6366f1; bottom: -200px; right: -100px; animation: orbFloat 25s ease-in-out infinite alternate-reverse; }
+        .bg-layer .orb-3 { width: 350px; height: 350px; background: #22c55e; top: 50%; left: 60%; animation: orbFloat 18s ease-in-out 3s infinite alternate; }
+        @keyframes orbFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(60px, 40px) scale(1.12); }
+        }
+        .grid-overlay {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.025;
+            background-image:
+                linear-gradient(rgba(59,130,246,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59,130,246,0.3) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* ===== LAYOUT ===== */
+        .shell { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* ===== HEADER ===== */
+        .top-bar {
+            padding: 20px 40px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: rgba(13,17,32,0.6); backdrop-filter: blur(20px);
+        }
+        .brand { display: flex; align-items: center; gap: 14px; }
+        .brand-icon {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 24px rgba(59,130,246,0.3);
+        }
+        .brand-icon svg { width: 22px; height: 22px; color: #fff; }
+        .brand h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.35rem; letter-spacing: -0.02em;
+        }
+        .brand-sub { font-size: 0.72rem; color: var(--muted); margin-top: 1px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 500; }
+        .top-badge {
+            padding: 6px 16px; border-radius: 999px; font-size: 0.68rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #86efac;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .top-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+        /* ===== MAIN ===== */
+        .main-area {
+            flex: 1; display: flex; align-items: flex-start; justify-content: center;
+            padding: 48px 40px 60px;
+        }
+        .generator-card {
+            width: 100%; max-width: 820px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 0 0 1px rgba(59,130,246,0.04), 0 30px 80px rgba(0,0,0,0.4);
+        }
+        .card-header {
+            padding: 28px 36px 24px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(19,26,46,0.5);
+        }
+        .card-header h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.5rem; margin-bottom: 6px;
+        }
+        .card-header p { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+        .steps-indicator {
+            display: flex; gap: 8px; margin-top: 20px;
+        }
+        .step-pill {
+            padding: 5px 14px; border-radius: 999px; font-size: 0.68rem; font-weight: 600;
+            background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.1); color: var(--muted);
+            transition: all 0.3s;
+        }
+        .step-pill.active { background: rgba(59,130,246,0.15); border-color: var(--accent); color: #93c5fd; }
+        .step-pill.done { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.25); color: #86efac; }
+
+        .card-body { padding: 32px 36px 36px; }
+
+        /* ===== FORM ===== */
+        .form-section { margin-bottom: 28px; }
+        .form-section:last-child { margin-bottom: 0; }
+        .section-label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px;
+        }
+        .section-label svg { width: 14px; height: 14px; opacity: 0.5; }
+        .section-label .num {
+            width: 20px; height: 20px; border-radius: 6px;
+            background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; font-weight: 700; color: #93c5fd;
+        }
+
+        .field { margin-bottom: 16px; }
+        .field:last-child { margin-bottom: 0; }
+        .field label {
+            display: block; font-size: 0.78rem; font-weight: 500; color: var(--text);
+            margin-bottom: 7px;
+        }
+        .field label .req { color: var(--red); margin-left: 2px; }
+        .field-hint { font-size: 0.7rem; color: var(--muted); margin-top: 5px; }
+
+        input[type="text"], input[type="url"], input[type="number"], select, textarea {
+            width: 100%; padding: 11px 14px; border-radius: 10px;
+            background: var(--bg2); border: 1px solid var(--border);
+            color: var(--text); font-family: inherit; font-size: 0.85rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: rgba(59,130,246,0.4);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.08);
+        }
+        input::placeholder, textarea::placeholder { color: rgba(122,139,171,0.5); }
+        select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a8bab' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+        select option { background: var(--bg2); color: var(--text); }
+        textarea { resize: vertical; min-height: 60px; }
+
+        .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; border-radius: 10px;
+            background: var(--bg2); border: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+        .toggle-row:last-child { margin-bottom: 0; }
+        .toggle-label { font-size: 0.8rem; font-weight: 500; }
+        .toggle-label span { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 400; margin-top: 2px; }
+        .toggle {
+            width: 42px; height: 24px; border-radius: 999px;
+            background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.15);
+            position: relative; cursor: pointer; transition: background 0.25s;
+            flex-shrink: 0;
+        }
+        .toggle.on { background: rgba(59,130,246,0.35); border-color: var(--accent); }
+        .toggle::after {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--muted); transition: all 0.25s;
+        }
+        .toggle.on::after { left: 21px; background: #93c5fd; }
+
+        .url-status {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 0.7rem; font-weight: 500; margin-top: 6px;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .url-status.show { opacity: 1; }
+        .url-status.valid { color: #86efac; }
+        .url-status.invalid { color: #fca5a5; }
+        .url-status svg { width: 13px; height: 13px; }
+
+        /* ===== PREVIEW ===== */
+        .preview-section {
+            margin-top: 28px; padding-top: 28px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+        .preview-section.show { display: block; }
+        .preview-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .preview-bar h3 { font-size: 0.85rem; font-weight: 600; }
+        .preview-mini {
+            width: 100%; height: 320px; border-radius: 10px;
+            border: 1px solid var(--border); background: #0a0e17;
+            overflow: hidden; position: relative;
+        }
+        .preview-mini iframe {
+            width: 200%; height: 200%; border: none;
+            transform: scale(0.5); transform-origin: 0 0;
+            pointer-events: none;
+        }
+
+        /* ===== ACTIONS ===== */
+        .actions {
+            margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 24px; border-radius: 10px; border: none;
+            font-family: inherit; font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn svg { width: 16px; height: 16px; }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff; box-shadow: 0 0 24px rgba(59,130,246,0.25);
+        }
+        .btn-primary:hover { box-shadow: 0 0 36px rgba(59,130,246,0.4); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.4; pointer-events: none; transform: none; box-shadow: none; }
+        .btn-secondary {
+            background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);
+            color: #93c5fd;
+        }
+        .btn-secondary:hover { background: rgba(59,130,246,0.15); }
+        .btn-success {
+            background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.2);
+            color: #86efac;
+        }
+        .btn-success:hover { background: rgba(34,197,94,0.2); }
+
+        /* ===== GENERATED OUTPUT ===== */
+        .output-panel {
+            display: none; margin-top: 28px; padding-top: 28px;
+            border-top: 1px solid var(--border);
+        }
+        .output-panel.show { display: block; }
+        .output-panel h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 14px; }
+        .code-block {
+            position: relative; background: var(--bg);
+            border: 1px solid var(--border); border-radius: 10px;
+            max-height: 280px; overflow: auto;
+        }
+        .code-block pre {
+            padding: 16px; font-size: 0.72rem; line-height: 1.6;
+            font-family: 'SF Mono', 'Fira Code', monospace; color: var(--muted);
+            white-space: pre; overflow-x: auto;
+        }
+        .code-copy-btn {
+            position: sticky; top: 8px; float: right; margin: 8px 8px 0 0;
+            padding: 6px 12px; border-radius: 6px; border: none;
+            background: rgba(59,130,246,0.15); color: #93c5fd;
+            font-size: 0.7rem; font-weight: 600; cursor: pointer;
+            font-family: inherit; transition: background 0.2s; z-index: 2;
+        }
+        .code-copy-btn:hover { background: rgba(59,130,246,0.25); }
+
+        /* ===== SUCCESS BANNER ===== */
+        .success-banner {
+            display: none; padding: 16px 20px; border-radius: 10px;
+            background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2);
+            margin-top: 20px; align-items: center; gap: 10px;
+        }
+        .success-banner.show { display: flex; }
+        .success-banner svg { width: 20px; height: 20px; color: #22c55e; flex-shrink: 0; }
+        .success-banner p { font-size: 0.8rem; color: #86efac; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .top-bar { padding: 16px 20px; }
+            .main-area { padding: 24px 16px 40px; }
+            .card-header, .card-body { padding-left: 20px; padding-right: 20px; }
+            .row-2, .row-3 { grid-template-columns: 1fr; }
+            .brand h1 { font-size: 1.1rem; }
+            .top-badge { display: none; }
+        }
+
+        /* ===== ANIMATIONS ===== */
+        .fade-up { animation: fadeUp 0.5s ease-out forwards; }
+        .fade-up-d1 { animation: fadeUp 0.5s ease-out 0.1s forwards; opacity: 0; }
+        .fade-up-d2 { animation: fadeUp 0.5s ease-out 0.2s forwards; opacity: 0; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-layer">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+    <div class="grid-overlay"></div>
+
+    <div class="shell">
+        <!-- Header -->
+        <div class="top-bar fade-up">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>
+                </div>
+                <div>
+                    <h1>SecureDoc Generator</h1>
+                    <div class="brand-sub">Protected Document Portal Builder</div>
+                </div>
+            </div>
+            <div class="top-badge"><div class="dot"></div> Generator Active</div>
+        </div>
+
+        <!-- Main -->
+        <div class="main-area">
+            <div class="generator-card fade-up-d1">
+                <div class="card-header">
+                    <h2>Create Secure Document Page</h2>
+                    <p>Paste any Google Docs link and configure your secure viewing portal. The generated HTML includes copy protection, screenshot blocking, session timers, watermarks, and DevTools detection.</p>
+                    <div class="steps-indicator">
+                        <div class="step-pill active" id="stepPill1">1 — Document</div>
+                        <div class="step-pill" id="stepPill2">2 — Settings</div>
+                        <div class="step-pill" id="stepPill3">3 — Generate</div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <!-- Step 1: Document Link -->
+                    <div class="form-section">
+                        <div class="section-label"><div class="num">1</div> Document Source</div>
+                        <div class="field">
+                            <label>Google Docs URL <span class="req">*</span></label>
+                            <input type="url" id="docUrl" placeholder="https://docs.google.com/document/d/...">
+                            <div class="url-status" id="urlStatus">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                                <span id="urlStatusText"></span>
+                            </div>
+                            <div class="field-hint">Supports Google Docs, Sheets, Slides, and published document links.</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Metadata -->
+                    <div class="form-section">
+                        <div class="section-label"><div class="num">2</div> Document Metadata</div>
+                        <div class="row-2">
+                            <div class="field">
+                                <label>Document Title <span class="req">*</span></label>
+                                <input type="text" id="docTitle" placeholder="e.g. Q4 Strategy Report">
+                            </div>
+                            <div class="field">
+                                <label>Owner Name <span class="req">*</span></label>
+                                <input type="text" id="docOwner" placeholder="e.g. Ashen Wijesingha">
+                            </div>
+                        </div>
+                        <div class="row-3">
+                            <div class="field">
+                                <label>Classification</label>
+                                <select id="docClassification">
+                                    <option value="Confidential">Confidential</option>
+                                    <option value="Internal Only">Internal Only</option>
+                                    <option value="Restricted">Restricted</option>
+                                    <option value="Top Secret">Top Secret</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Access Level</label>
+                                <select id="docAccess">
+                                    <option value="View Only">View Only</option>
+                                    <option value="Comment Only">Comment Only</option>
+                                    <option value="Restricted View">Restricted View</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Session Duration (min)</label>
+                                <input type="number" id="sessionDuration" value="30" min="5" max="120">
+                            </div>
+                        </div>
+                        <div class="field" style="margin-top:14px">
+                            <label>Watermark Text</label>
+                            <input type="text" id="watermarkText" placeholder="CONFIDENTIAL • VIEW ONLY" value="CONFIDENTIAL • VIEW ONLY">
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Security Toggles -->
+                    <div class="form-section">
+                        <div class="section-label"><div class="num">3</div> Security Features</div>
+                        <div class="toggle-row">
+                            <div class="toggle-label">Copy / Paste Protection<span>Block clipboard operations and text selection</span></div>
+                            <div class="toggle on" data-feature="copyProtect" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-label">Screenshot Protection<span>Blank content when tab loses focus</span></div>
+                            <div class="toggle on" data-feature="screenshotProtect" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-label">Print Blocking<span>Disable browser print functionality</span></div>
+                            <div class="toggle on" data-feature="printBlock" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-label">DevTools Detection<span>Revoke access if developer tools are opened</span></div>
+                            <div class="toggle on" data-feature="devtoolsDetect" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-label">Watermark Overlay<span>Semi-transparent repeating watermark on document</span></div>
+                            <div class="toggle on" data-feature="watermark" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-label">Idle Auto-Lock<span>Lock session after 5 minutes of inactivity</span></div>
+                            <div class="toggle on" data-feature="idleLock" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-label">Session Timer<span>Countdown timer that expires the session</span></div>
+                            <div class="toggle on" data-feature="sessionTimer" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-label">XOR Encrypt Source URL<span>Obfuscate the document URL in the HTML source</span></div>
+                            <div class="toggle on" data-feature="xorEncrypt" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="actions">
+                        <button class="btn btn-primary" id="generateBtn" onclick="generatePortal()" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>
+                            Generate Secure Portal
+                        </button>
+                        <button class="btn btn-secondary" id="previewBtn" onclick="showPreview()" style="display:none">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                            Preview
+                        </button>
+                    </div>
+
+                    <!-- Success -->
+                    <div class="success-banner" id="successBanner">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                        <p>Secure portal generated successfully. Download the HTML file to deploy.</p>
+                    </div>
+
+                    <!-- Output -->
+                    <div class="output-panel" id="outputPanel">
+                        <h3>Generated HTML</h3>
+                        <div class="code-block">
+                            <button class="code-copy-btn" onclick="copyCode()">Copy HTML</button>
+                            <pre id="codeOutput"></pre>
+                        </div>
+                        <div class="actions" style="margin-top:16px">
+                            <button class="btn btn-success" onclick="downloadHTML()">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                                Download HTML File
+                            </button>
+                            <button class="btn btn-secondary" onclick="openPreviewTab()">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                                Open in New Tab
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        let generatedHTML = '';
+        const docUrlInput = document.getElementById('docUrl');
+        const docTitleInput = document.getElementById('docTitle');
+        const docOwnerInput = document.getElementById('docOwner');
+        const generateBtn = document.getElementById('generateBtn');
+
+        /* ===== URL VALIDATION ===== */
+        docUrlInput.addEventListener('input', validateUrl);
+        docTitleInput.addEventListener('input', checkReady);
+        docOwnerInput.addEventListener('input', checkReady);
+
+        function validateUrl() {
+            const val = docUrlInput.value.trim();
+            const status = document.getElementById('urlStatus');
+            const text = document.getElementById('urlStatusText');
+            const svg = status.querySelector('svg');
+
+            if (!val) { status.classList.remove('show'); checkReady(); return; }
+
+            const isGoogle = /docs\.google\.com\/(document|spreadsheets|presentation|file)\/d\//.test(val);
+            const isPublished = /docs\.google\.com\/.*\/pub/.test(val);
+            const isGenericUrl = /^https?:\/\/.+/.test(val);
+
+            status.classList.add('show');
+            if (isGoogle || isPublished) {
+                status.className = 'url-status show valid';
+                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>';
+                text.textContent = 'Valid Google Docs link detected';
+            } else if (isGenericUrl) {
+                status.className = 'url-status show valid';
+                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>';
+                text.textContent = 'URL accepted';
+            } else {
+                status.className = 'url-status show invalid';
+                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>';
+                text.textContent = 'Please enter a valid URL';
+            }
+            checkReady();
+        }
+
+        function checkReady() {
+            const urlOk = /^https?:\/\/.+/.test(docUrlInput.value.trim());
+            const titleOk = docTitleInput.value.trim().length > 0;
+            const ownerOk = docOwnerInput.value.trim().length > 0;
+            generateBtn.disabled = !(urlOk && titleOk && ownerOk);
+
+            // Update step pills
+            document.getElementById('stepPill1').className = 'step-pill' + (urlOk ? ' done' : ' active');
+            document.getElementById('stepPill2').className = 'step-pill' + ((titleOk && ownerOk) ? ' done' : (urlOk ? ' active' : ''));
+            document.getElementById('stepPill3').className = 'step-pill' + ((urlOk && titleOk && ownerOk) ? ' active' : '');
+        }
+
+        /* ===== TOGGLE HELPERS ===== */
+        function isOn(feature) {
+            const el = document.querySelector(`.toggle[data-feature="${feature}"]`);
+            return el && el.classList.contains('on');
+        }
+
+        /* ===== CONVERT URL TO EMBED ===== */
+        function toEmbedUrl(rawUrl) {
+            // Google Docs
+            let m = rawUrl.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
+            if (m) return 'https://docs.google.com/document/d/' + m[1] + '/pub?embedded=true';
+            // Google Sheets
+            m = rawUrl.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+            if (m) return 'https://docs.google.com/spreadsheets/d/' + m[1] + '/pubhtml?widget=true&headers=false';
+            // Google Slides
+            m = rawUrl.match(/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+            if (m) return 'https://docs.google.com/presentation/d/' + m[1] + '/embed?start=false&loop=false&delayms=3000';
+            // Already a /pub link
+            if (/\/pub(\?|$)/.test(rawUrl)) return rawUrl;
+            return rawUrl;
+        }
+
+        /* ===== XOR ENCRYPT ===== */
+        function xorEncrypt(str) {
+            const key = [0x5A, 0x3F, 0x7C, 0x1D, 0xA2, 0x6B, 0x9E, 0x04, 0xF1, 0x38, 0xC7, 0x55, 0x8D, 0x2A, 0xE6, 0x73];
+            const enc = [];
+            for (let i = 0; i < str.length; i++) {
+                enc.push(str.charCodeAt(i) ^ key[i % key.length]);
+            }
+            return enc;
+        }
+
+        /* ===== GENERATE ===== */
+        window.generatePortal = function() {
+            const rawUrl = docUrlInput.value.trim();
+            const embedUrl = toEmbedUrl(rawUrl);
+            const title = docTitleInput.value.trim();
+            const owner = docOwnerInput.value.trim();
+            const classification = document.getElementById('docClassification').value;
+            const access = document.getElementById('docAccess').value;
+            const sessionMin = parseInt(document.getElementById('sessionDuration').value) || 30;
+            const wmText = document.getElementById('watermarkText').value || 'CONFIDENTIAL • VIEW ONLY';
+
+            const useCopyProtect = isOn('copyProtect');
+            const useScreenshot = isOn('screenshotProtect');
+            const usePrint = isOn('printBlock');
+            const useDevtools = isOn('devtoolsDetect');
+            const useWatermark = isOn('watermark');
+            const useIdle = isOn('idleLock');
+            const useTimer = isOn('sessionTimer');
+            const useXor = isOn('xorEncrypt');
+
+            // Build encrypted array or plain URL
+            let docLoadSnippet;
+            if (useXor) {
+                const enc = xorEncrypt(embedUrl);
+                docLoadSnippet = `
+        const _k = [0x5A,0x3F,0x7C,0x1D,0xA2,0x6B,0x9E,0x04,0xF1,0x38,0xC7,0x55,0x8D,0x2A,0xE6,0x73];
+        const _enc = [${enc.join(',')}];
+        function getDocUrl() { return _enc.map((b,i) => String.fromCharCode(b ^ _k[i % _k.length])).join(''); }`;
+            } else {
+                docLoadSnippet = `
+        function getDocUrl() { return ${JSON.stringify(embedUrl)}; }`;
+            }
+
+            // Security tags HTML
+            const secTags = [];
+            if (useCopyProtect) secTags.push(`<div class="sec-tag"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>Copy Disabled</div>`);
+            if (useScreenshot) secTags.push(`<div class="sec-tag"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>Screenshot Protected</div>`);
+            if (usePrint) secTags.push(`<div class="sec-tag"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12H5.25"/></svg>Print Blocked</div>`);
+            if (useIdle) secTags.push(`<div class="sec-tag"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>Auto-Lock</div>`);
+
+            generatedHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escH(title)} — SecureDoc Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        :root{--bg-primary:#0a0e17;--bg-secondary:#111827;--bg-card:#1a2236;--accent:#3b82f6;--text-primary:#e2e8f0;--text-muted:#94a3b8;--border:rgba(59,130,246,0.12);--danger:#ef4444}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body,html{-webkit-user-select:none!important;-moz-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
+        body{font-family:'DM Sans',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
+        .bg-mesh{position:fixed;inset:0;z-index:0;pointer-events:none}
+        .bg-mesh::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(59,130,246,0.08)0%,transparent 70%);top:-200px;left:-100px;animation:drift 18s ease-in-out infinite alternate}
+        .bg-mesh::after{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(99,102,241,0.06)0%,transparent 70%);bottom:-150px;right:-100px;animation:drift 22s ease-in-out infinite alternate-reverse}
+        @keyframes drift{0%{transform:translate(0,0)scale(1)}100%{transform:translate(80px,60px)scale(1.15)}}
+        .noise{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-repeat:repeat;background-size:200px}
+        .app-container{position:relative;z-index:2;display:flex;flex-direction:column;min-height:100vh}
+        .app-header{background:rgba(17,24,39,0.7);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+        .logo-group{display:flex;align-items:center;gap:12px}
+        .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(59,130,246,0.25)}
+        .logo-icon svg{width:20px;height:20px;color:#fff}
+        .logo-text{font-family:'DM Serif Display',serif;font-size:1.2rem;letter-spacing:-0.02em}
+        .header-right{display:flex;align-items:center;gap:12px}
+        .header-badge{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em}
+        .badge-confidential{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5}
+        .badge-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;animation:pulse-dot 2s ease-in-out infinite}
+        @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+        .session-timer{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:0.7rem;font-weight:500;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);color:#93c5fd}
+        .session-timer svg{width:14px;height:14px}
+        .session-timer.expiring{color:#fca5a5;border-color:rgba(239,68,68,0.25);background:rgba(239,68,68,0.08)}
+        .info-bar{background:rgba(26,34,54,0.6);border-bottom:1px solid var(--border);padding:14px 2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+        .doc-meta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+        .meta-item{display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--text-muted)}
+        .meta-item svg{width:14px;height:14px;opacity:0.6}
+        .meta-item strong{color:var(--text-primary);font-weight:500}
+        .security-tags{display:flex;gap:8px;flex-wrap:wrap}
+        .sec-tag{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:0.68rem;font-weight:500;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);color:#93c5fd}
+        .sec-tag svg{width:12px;height:12px}
+        .doc-toolbar{background:rgba(26,34,54,0.4);border-bottom:1px solid var(--border);padding:8px 2rem;display:flex;align-items:center;justify-content:space-between;gap:12px}
+        .toolbar-left,.toolbar-right{display:flex;align-items:center;gap:8px}
+        .toolbar-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;font-size:0.72rem;font-weight:500;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.12);color:#93c5fd;cursor:pointer;transition:all 0.2s}
+        .toolbar-btn:hover{background:rgba(59,130,246,0.15);border-color:rgba(59,130,246,0.3)}
+        .toolbar-btn svg{width:14px;height:14px}
+        .toolbar-btn.disabled{opacity:0.35;pointer-events:none}
+        .zoom-display{font-size:0.72rem;color:var(--text-muted);min-width:40px;text-align:center}
+        .toolbar-divider{width:1px;height:20px;background:var(--border)}
+        .viewer-wrapper{flex:1;padding:1.5rem 2rem 2rem;display:flex;flex-direction:column}
+        .viewer-frame{flex:1;position:relative;background:var(--bg-card);border-radius:12px;border:1px solid var(--border);overflow:hidden;min-height:75vh;box-shadow:0 0 0 1px rgba(59,130,246,0.05),0 20px 60px rgba(0,0,0,0.3)}
+        .viewer-frame iframe{width:100%;height:100%;border:none;position:absolute;inset:0}
+        .iframe-shield{position:absolute;inset:0;z-index:10;cursor:default;background:transparent}
+        .iframe-shield.scrolling{pointer-events:none}
+        .watermark-layer{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;opacity:0.03}
+        .watermark-layer span{position:absolute;font-size:14px;font-weight:700;color:#fff;white-space:nowrap;transform:rotate(-35deg);letter-spacing:0.1em;text-transform:uppercase}
+        .loader-overlay{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-card);transition:opacity 0.5s,visibility 0.5s}
+        .loader-overlay.hidden{opacity:0;visibility:hidden}
+        .spinner{width:40px;height:40px;border:3px solid rgba(59,130,246,0.15);border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .loader-text{margin-top:16px;font-size:0.82rem;color:var(--text-muted)}
+        .loader-progress{margin-top:12px;width:200px;height:3px;background:rgba(59,130,246,0.1);border-radius:3px;overflow:hidden}
+        .loader-progress-bar{height:100%;width:0%;border-radius:3px;background:linear-gradient(90deg,#3b82f6,#6366f1);animation:loadProgress 2.5s ease-out forwards}
+        @keyframes loadProgress{0%{width:0%}40%{width:60%}80%{width:85%}100%{width:95%}}
+        .toast-container{position:fixed;top:80px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px}
+        .toast{padding:12px 18px;border-radius:10px;font-size:0.78rem;font-weight:500;backdrop-filter:blur(16px);transform:translateX(120%);opacity:0;transition:all 0.35s cubic-bezier(0.16,1,0.3,1);display:flex;align-items:center;gap:8px;max-width:340px}
+        .toast.show{transform:translateX(0);opacity:1}
+        .toast-warn{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:#fca5a5}
+        .toast-info{background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);color:#93c5fd}
+        .toast-success{background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);color:#86efac}
+        .toast svg{width:16px;height:16px;flex-shrink:0}
+        .app-footer{padding:16px 2rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);background:rgba(17,24,39,0.5)}
+        .footer-lock{display:flex;align-items:center;gap:6px}
+        .footer-lock svg{width:12px;height:12px;color:#22c55e}
+        .screenshot-block{position:fixed;inset:0;z-index:9999;background:#0a0e17;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity 0.15s}
+        .screenshot-block.active{opacity:1;visibility:visible}
+        .screenshot-block svg{width:48px;height:48px;color:#ef4444;margin-bottom:16px}
+        .screenshot-block h2{font-family:'DM Serif Display',serif;font-size:1.4rem;color:#fca5a5;margin-bottom:8px}
+        .screenshot-block p{font-size:0.85rem;color:var(--text-muted)}
+        .idle-lock{position:fixed;inset:0;z-index:9998;background:rgba(10,14,23,0.97);backdrop-filter:blur(30px);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity 0.4s}
+        .idle-lock.active{opacity:1;visibility:visible}
+        .idle-lock .lock-icon{width:64px;height:64px;border-radius:50%;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+        .idle-lock .lock-icon svg{width:28px;height:28px;color:#3b82f6}
+        .idle-lock h2{font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:8px}
+        .idle-lock p{font-size:0.82rem;color:var(--text-muted);margin-bottom:24px}
+        .idle-lock button{padding:10px 28px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;font-size:0.85rem;font-weight:600;cursor:pointer;box-shadow:0 0 20px rgba(59,130,246,0.25);transition:transform 0.15s,box-shadow 0.15s}
+        .idle-lock button:hover{transform:translateY(-1px);box-shadow:0 0 30px rgba(59,130,246,0.4)}
+        ${usePrint ? `@media print{body *{display:none!important}body::after{content:'⛔ Printing is disabled for this confidential document.';display:flex;align-items:center;justify-content:center;height:100vh;font-size:24px;color:#333;font-family:sans-serif}}` : ''}
+        @media(max-width:768px){.app-header{padding:0 1rem}.info-bar{padding:12px 1rem}.doc-toolbar{padding:8px 1rem;flex-wrap:wrap}.viewer-wrapper{padding:1rem}.logo-text{font-size:1rem}.session-timer{display:none}}
+        .fade-in{animation:fadeIn .6s ease-out forwards}.fade-in-delay{animation:fadeIn .6s ease-out .2s forwards;opacity:0}.fade-in-delay2{animation:fadeIn .6s ease-out .35s forwards;opacity:0}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    </style>
+</head>
+<body>
+    <div class="bg-mesh"></div><div class="noise"></div>
+    ${useScreenshot ? `<div class="screenshot-block" id="screenshotBlock"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg><h2>Content Protected</h2><p>Screenshot capture is restricted for this confidential document.</p></div>` : ''}
+    ${useIdle ? `<div class="idle-lock" id="idleLock"><div class="lock-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg></div><h2>Session Locked</h2><p>Your session was locked due to inactivity.</p><button onclick="resumeSession()">Resume Viewing</button></div>` : ''}
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="app-container">
+        <header class="app-header fade-in">
+            <div class="logo-group">
+                <div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg></div>
+                <span class="logo-text">SecureDoc Portal</span>
+            </div>
+            <div class="header-right">
+                ${useTimer ? `<div class="session-timer" id="sessionTimer"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg><span id="timerText">${sessionMin}:00</span></div>` : ''}
+                <div class="header-badge badge-confidential"><span class="badge-dot"></span>${escH(classification)}</div>
+            </div>
+        </header>
+        <div class="info-bar fade-in-delay">
+            <div class="doc-meta">
+                <div class="meta-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg><strong>${escH(title)}</strong></div>
+                <div class="meta-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>Owner: <strong>${escH(owner)}</strong></div>
+                <div class="meta-item"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>Access: <strong>${escH(access)}</strong></div>
+            </div>
+            <div class="security-tags">${secTags.join('')}</div>
+        </div>
+        <div class="doc-toolbar fade-in-delay2">
+            <div class="toolbar-left">
+                <button class="toolbar-btn" onclick="zoomOut()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"/></svg></button>
+                <span class="zoom-display" id="zoomDisplay">100%</span>
+                <button class="toolbar-btn" onclick="zoomIn()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"/></svg></button>
+                <button class="toolbar-btn" onclick="zoomReset()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/></svg>Fit</button>
+                <div class="toolbar-divider"></div>
+                <button class="toolbar-btn" onclick="toggleFullscreen()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>Fullscreen</button>
+            </div>
+            <div class="toolbar-right">
+                <button class="toolbar-btn disabled"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>Download</button>
+                <button class="toolbar-btn disabled"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12H5.25"/></svg>Print</button>
+            </div>
+        </div>
+        <div class="viewer-wrapper fade-in-delay2">
+            <div class="viewer-frame" id="viewerFrame">
+                ${useWatermark ? `<div class="watermark-layer" id="watermarkLayer"></div>` : ''}
+                <div class="iframe-shield" id="iframeShield"></div>
+                <div class="loader-overlay" id="loader"><div class="spinner"></div><p class="loader-text">Decrypting and loading secure document…</p><div class="loader-progress"><div class="loader-progress-bar"></div></div></div>
+            </div>
+        </div>
+        <footer class="app-footer">
+            <div class="footer-lock"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>End-to-end protected &middot; AES-256 encrypted link</div>
+            <span>Session started at <span id="sessionStart"></span></span>
+            <span>&copy; 2026 SecureDoc Portal. All rights reserved.</span>
+        </footer>
+    </div>
+    <script>
+    (function(){
+        'use strict';
+        const SESSION_DURATION = ${sessionMin} * 60;
+        const IDLE_TIMEOUT = 5 * 60 * 1000;
+        let sessionSeconds = SESSION_DURATION;
+        let idleTimer, currentZoom = 100;
+        ${docLoadSnippet}
+
+        /* Toast */
+        function showToast(msg, type, dur) {
+            type = type || 'info'; dur = dur || 3500;
+            var c = document.getElementById('toastContainer');
+            var t = document.createElement('div');
+            t.className = 'toast toast-' + type;
+            var icons = {warn:'<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>',info:'<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>',success:'<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'};
+            t.innerHTML = (icons[type]||icons.info) + '<span>' + msg + '</span>';
+            c.appendChild(t);
+            requestAnimationFrame(function(){requestAnimationFrame(function(){t.classList.add('show')})});
+            setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove()},400)},dur);
+        }
+
+        /* Session timer */
+        ${useTimer ? `
+        var timerEl = document.getElementById('timerText');
+        var timerWrap = document.getElementById('sessionTimer');
+        setInterval(function(){
+            sessionSeconds--;
+            if(sessionSeconds<=0){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0e17;color:#fca5a5;font-family:sans-serif;font-size:1.2rem;text-align:center;padding:2rem;flex-direction:column;"><strong style="font-size:1.4rem;margin-bottom:8px;">Session Expired</strong><p style="color:#94a3b8;">Your viewing session has ended. Please request a new access link.</p></div>';return}
+            var m=Math.floor(sessionSeconds/60),s=sessionSeconds%60;
+            timerEl.textContent=m+':'+String(s).padStart(2,'0');
+            if(sessionSeconds<=300)timerWrap.classList.add('expiring');
+        },1000);` : ''}
+
+        /* Idle lock */
+        ${useIdle ? `
+        function resetIdle(){clearTimeout(idleTimer);idleTimer=setTimeout(function(){document.getElementById('idleLock').classList.add('active')},IDLE_TIMEOUT)}
+        window.resumeSession=function(){document.getElementById('idleLock').classList.remove('active');resetIdle();showToast('Session resumed','success',2000)};
+        ['mousemove','keydown','scroll','touchstart','click'].forEach(function(e){document.addEventListener(e,resetIdle,{passive:true})});
+        resetIdle();` : ''}
+
+        /* Watermark */
+        ${useWatermark ? `
+        (function(){var l=document.getElementById('watermarkLayer');if(!l)return;var t=${JSON.stringify(wmText)};for(var y=0;y<20;y++)for(var x=0;x<6;x++){var s=document.createElement('span');s.textContent=t;s.style.left=(x*18+(y%2)*9)+'%';s.style.top=(y*6)+'%';l.appendChild(s)}})();` : ''}
+
+        /* Load doc */
+        (function(){
+            var url=getDocUrl();var f=document.getElementById('viewerFrame');
+            var iframe=document.createElement('iframe');iframe.src=url;
+            iframe.setAttribute('sandbox','allow-scripts allow-same-origin');iframe.setAttribute('loading','lazy');
+            iframe.style.cssText='width:100%;height:100%;border:none;position:absolute;inset:0;transform-origin:0 0;';
+            iframe.onload=function(){setTimeout(function(){document.getElementById('loader').classList.add('hidden');showToast('Document loaded securely','success',2500)},800)};
+            f.insertBefore(iframe,f.firstChild);
+        })();
+
+        /* Zoom */
+        window.zoomIn=function(){currentZoom=Math.min(currentZoom+15,200);applyZoom()};
+        window.zoomOut=function(){currentZoom=Math.max(currentZoom-15,50);applyZoom()};
+        window.zoomReset=function(){currentZoom=100;applyZoom()};
+        function applyZoom(){var i=document.querySelector('#viewerFrame iframe');if(i){i.style.transform='scale('+(currentZoom/100)+')';i.style.width=(10000/currentZoom)+'%';i.style.height=(10000/currentZoom)+'%'}document.getElementById('zoomDisplay').textContent=currentZoom+'%'}
+        window.toggleFullscreen=function(){var el=document.getElementById('viewerFrame');if(!document.fullscreenElement)el.requestFullscreen().catch(function(){});else document.exitFullscreen()};
+
+        /* Shield */
+        var shield=document.getElementById('iframeShield');var st;
+        shield.addEventListener('wheel',function(){shield.classList.add('scrolling');clearTimeout(st);st=setTimeout(function(){shield.classList.remove('scrolling')},600)},{passive:true});
+        shield.addEventListener('touchstart',function(){shield.classList.add('scrolling')},{passive:true});
+        shield.addEventListener('touchend',function(){setTimeout(function(){shield.classList.remove('scrolling')},600)},{passive:true});
+
+        /* Anti-copy */
+        ${useCopyProtect ? `
+        ['copy','cut','paste'].forEach(function(evt){document.addEventListener(evt,function(e){e.preventDefault();showToast('Action blocked — this document is protected','warn');return false})});
+        document.addEventListener('contextmenu',function(e){e.preventDefault();showToast('Right-click disabled','warn');return false});
+        document.addEventListener('selectstart',function(e){e.preventDefault();return false});
+        document.addEventListener('dragstart',function(e){e.preventDefault();return false});
+        document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&['c','x','v','a','s','p','u'].indexOf(e.key.toLowerCase())>-1){e.preventDefault();showToast('Keyboard shortcut blocked','warn');return false}if(e.key==='PrintScreen'||e.key==='F12'){e.preventDefault();return false}if(e.ctrlKey&&e.shiftKey&&['i','j','c'].indexOf(e.key.toLowerCase())>-1){e.preventDefault();return false}});` : ''}
+
+        /* Screenshot */
+        ${useScreenshot ? `
+        var sb=document.getElementById('screenshotBlock');
+        document.addEventListener('visibilitychange',function(){if(document.hidden)sb.classList.add('active');else setTimeout(function(){sb.classList.remove('active')},300)});
+        window.addEventListener('blur',function(){sb.classList.add('active')});
+        window.addEventListener('focus',function(){setTimeout(function(){sb.classList.remove('active')},300)});` : ''}
+
+        /* DevTools */
+        ${useDevtools ? `
+        (function(){function ck(){if(window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0e17;color:#fca5a5;font-family:sans-serif;font-size:1.2rem;text-align:center;padding:2rem;flex-direction:column;"><strong style="font-size:1.4rem;margin-bottom:8px;">Access Revoked</strong>Developer tools detected. Document access has been suspended.</div>'}}setInterval(ck,1500);window.addEventListener('resize',ck)})();` : ''}
+
+        document.getElementById('sessionStart').textContent=new Date().toLocaleTimeString();
+        setTimeout(function(){showToast('Secure session established — ${sessionMin} min remaining','info',4000)},1200);
+    })();
+    <\\/script>
+</body>
+</html>`;
+
+            // Show output
+            document.getElementById('codeOutput').textContent = generatedHTML;
+            document.getElementById('outputPanel').classList.add('show');
+            document.getElementById('successBanner').classList.add('show');
+            document.getElementById('previewBtn').style.display = '';
+            document.getElementById('stepPill3').className = 'step-pill done';
+        };
+
+        /* ===== HELPERS ===== */
+        function escH(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        window.copyCode = function() {
+            navigator.clipboard.writeText(generatedHTML).then(function() {
+                var btn = document.querySelector('.code-copy-btn');
+                btn.textContent = 'Copied!';
+                setTimeout(function() { btn.textContent = 'Copy HTML'; }, 2000);
+            });
+        };
+
+        window.downloadHTML = function() {
+            var blob = new Blob([generatedHTML], { type: 'text/html' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'securedoc-portal.html';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        };
+
+        window.openPreviewTab = function() {
+            var blob = new Blob([generatedHTML], { type: 'text/html' });
+            var url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        };
+
+        window.showPreview = function() {
+            // scroll to output
+            document.getElementById('outputPanel').scrollIntoView({ behavior: 'smooth' });
+        };
+
+    })();
+    </script>
+</body>
+</html>
