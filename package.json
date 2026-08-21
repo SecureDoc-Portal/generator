@@ -1,0 +1,35 @@
+{
+  "name": "securedoc-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Protected document portal builder \u2014 Next.js static frontend on GitHub Pages, Supabase backend.",
+  "scripts": {
+    "prebuild": "node scripts/sync-standalone.mjs && node scripts/copy-standalone.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "postbuild": "node scripts/postbuild.mjs",
+    "start": "npx serve out",
+    "lint": "next lint",
+    "test": "npm run test:qr && npm run test:portal && npm run test:standalone",
+    "test:db": "echo \"see tests/README.md \u2014 needs a local Postgres\"",
+    "test:qr": "node --experimental-strip-types tests/qr.test.mjs",
+    "test:portal": "node --experimental-strip-types --import ./tests/register-ts.mjs tests/portal.test.mjs",
+    "sync:standalone": "node scripts/sync-standalone.mjs",
+    "test:standalone": "node tests/standalone.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "next": "^15.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "jsqr": "^1.4.0",
+    "playwright": "^1.55.0",
+    "qrcode": "^1.5.4",
+    "typescript": "^5.6.0"
+  }
+}
